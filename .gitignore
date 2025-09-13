@@ -3,3 +3,5 @@ backup
 node_module
 reports
 model
+
+config/config_lot
