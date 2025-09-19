@@ -19,7 +19,7 @@ CAM_ID = config["main"]["cam"]
 # -----------------------------
 # Video input
 # -----------------------------
-cap = cv2.VideoCapture(CAM_ID)
+cap = cv2.VideoCapture(3)
 
 ret, frame = cap.read()
 if not ret:
@@ -30,13 +30,17 @@ clone = frame.copy()
 parking_slots = []        # List to store individual parking slot polygons
 current_polygon = []      # Points for the polygon being drawn
 main_area = []            # Overall parking area polygon
+in_area = []
+out_area = []
 drawing_main = False      # Flag: Are we drawing the main parking area?
+drawing_in = False
+drawing_out = False
 
 # -----------------------------
 # Mouse callback to draw polygons
 # -----------------------------
 def draw_polygon(event, x, y, flags, param):
-    global current_polygon, frame, parking_slots, main_area, drawing_main
+    global current_polygon, frame, parking_slots, main_area, drawing_main, in_area, out_area, drawing_in,drawing_out
 
     if event == cv2.EVENT_LBUTTONDOWN:
         current_polygon.append((x, y))
@@ -50,6 +54,12 @@ def draw_polygon(event, x, y, flags, param):
             if drawing_main:
                 main_area.extend(current_polygon)
                 log.log_event(f"Main parking area defined: {current_polygon}")
+            elif drawing_in:
+                in_area.extend(current_polygon)
+                log.log_event(f"In area defined: {current_polygon}")
+            elif drawing_out:
+                out_area.extend(current_polygon)
+                log.log_event(f"Out area defined: {current_polygon}")
             else:
                 parking_slots.append(current_polygon.copy())
                 # Calculate center to put slot number
@@ -90,13 +100,23 @@ while True:
     if key == ord("m"):
         drawing_main = not drawing_main
         print("Drawing main area:", drawing_main)
+    elif key == ord("i"):
+        drawing_in = not drawing_in
+        print("Drawing in area:", drawing_in)
+    elif key == ord("o"):
+        drawing_out = not drawing_out
+        print("Drawing out area:", drawing_out)
 
     elif key == ord("r"):
         frame = clone.copy()
         parking_slots = []
         current_polygon = []
         main_area = []
-        drawing_main = False
+        in_area = []
+        out_area = []
+        drawing_main = False      # Flag: Are we drawing the main parking area?
+        drawing_in = False
+        drawing_out = False
         print("Reset all")
 
     elif key == ord("q"):
@@ -106,12 +126,14 @@ cv2.destroyAllWindows()
 cap.release()
 
 
-config_lot = os.path.join("config", "config_lot.yml")
+config_lot = os.path.join("config", "config_lot.json")
 with open(config_lot, "w", encoding="utf-8") as w:
     
     park = {
         "main_area": main_area,
-        "parking_lot": parking_slots 
+        "parking_lot": parking_slots,
+        "in_area": in_area,
+        "out_area": out_area,
     }
     
     w.write(json.dumps(park, indent=4))
@@ -119,3 +141,5 @@ with open(config_lot, "w", encoding="utf-8") as w:
 
 log.log_event(f"✅ All parking slots: {parking_slots}")
 log.log_event(f"✅ Main parking area:{main_area}")
+log.log_event(f"✅ In point parking area:{in_area}")
+log.log_event(f"✅ Out point parking area:{out_area}")

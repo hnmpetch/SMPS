@@ -2,6 +2,7 @@
 
 main:
   cam: 0
+  rate: 20
 
 debug:
   debug: 1
