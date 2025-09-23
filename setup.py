@@ -19,7 +19,7 @@ CAM_ID = config["main"]["cam"]
 # -----------------------------
 # Video input
 # -----------------------------
-cap = cv2.VideoCapture(3)
+cap = cv2.VideoCapture(config['main']['cam'])
 
 ret, frame = cap.read()
 if not ret:

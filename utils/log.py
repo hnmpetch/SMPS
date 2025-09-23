@@ -53,7 +53,7 @@ class log:
             
         
         
-        logger.info(f" [ {timestamps} ] [ INFO ] : {message}.")
+        logger.info(f"[ {timestamps} ] [ INFO ] : {message}.")
         
     def success_event (message, end="\n", flush=False, shown=True):
         date = datetime.datetime.now().strftime("%d-%m-%Y")
