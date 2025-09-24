@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const { rateLimit } = require('express-rate-limit')
 const app = express();
 const PORT = 4002
 const userRouter = require('./Router/userRouter');

@@ -51,6 +51,9 @@ async function registerUser(req, res) {
     try{
         const { username, password, email } = req.body;
 
+        console.log(req);
+        console.log(req.body);
+
         if (!username || !password || !email) {
             return res.status(404).json(missinfo)
         }
@@ -76,7 +79,7 @@ async function registerUser(req, res) {
 
         try {
             
-            const hashpassword = bcrypt.hash(password, 20);
+            const hashpassword = await bcrypt.hash(password, 20);
             const newUser = await User.create({
                 username: username,
                 password: hashpassword,

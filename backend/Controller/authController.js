@@ -1,5 +1,6 @@
 const { User } = require("../model/user");
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 
 
 const sec_token = process.env.JWT;
@@ -21,7 +22,7 @@ const server_fail = {
 
 async function check_token(token) {
     
-    const decoded = await jwt.verify(token, sec_token);
+    const decoded = await jwt.verify(token, 'secretmakmak');
 
     if(decoded.username == null) {
         return false
@@ -34,8 +35,10 @@ async function check_token(token) {
 
 async function login(req, res) {
     
+    console.log("Api login");
+
     try{
-        const { username, password } = req.body();
+        const { username, password } = req.body;
 
         if (!username || !password) {
             return res.status(400).json({ message: 'Username and password are required' });
@@ -68,9 +71,9 @@ async function login(req, res) {
                 "username": username,
             }
 
-            const token = await jwt.sign(user_token, sec_token, { expiresIn: '30d' })
+            const token = await jwt.sign(user_token, "secretmakmak", { expiresIn: '30d' })
             
-            
+            console.log("Success Login");
             return res.status(200).json({
                 "id": User_unverify.id,
                 "username": User_unverify.username,
