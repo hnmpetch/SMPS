@@ -1,20 +1,17 @@
-from datetime import datetime
 import os
-import pandas as pd
 import subprocess
 import time
 import cv2
 import json
-import mysql.connector
 import yaml
 from ultralytics import YOLO
 import numpy as np
-from utils.log import log
 import asyncio
 import websockets
 from gpiozero import Servo
 from RPLCD.i2c import CharLCD
 
+print("starting...")
 
 
 
@@ -27,13 +24,13 @@ try :
     with open(os.path.join("config", "config_lot.json"),  'r', encoding="utf-8") as config:
         config_lot = json.load(config)
 except FileNotFoundError :
-    log.warning_event("No file setup config found try setup..")
+    print("No file setup config found try setup..")
     subprocess.call("py setup.py")
     try :
         with open(os.path.join("config", "config_lot.json"),  'r', encoding="utf-8") as config:
             config_lot = json.load(config)
     except FileNotFoundError :
-        log.warning_event("No file setup config found try setup..")
+        print("No file setup config found try setup..")
         subprocess.call("py setup.py")
         
 CAM_ID = config_yml["main"]["cam"]
@@ -47,7 +44,18 @@ servo_in = Servo(18)
 servo_out = Servo(17)
 
 lcd = CharLCD('PCF8574', 0x27)  # 0x27 คือ address ของ I2C LCD
-lcd.write_string('Hello, World!')
+lcd.cursor_pos = (0, 0)
+lcd.write_string('Smart parking system')
+lcd.cursor_pos = (1, 0)
+lcd.write_string('Starting...')
+
+
+lcd.cursor_pos = (1, 0)
+lcd.write_string('|XX|--1      4--|XX|')
+lcd.cursor_pos = (2, 0)
+lcd.write_string('|XX|--2      5--|XX|')
+lcd.cursor_pos = (3, 0)
+lcd.write_string('|XX|--3      6--|XX|')
 
 cap = cv2.VideoCapture(CAM_ID)
 
@@ -57,10 +65,10 @@ if not ret:
     print("❌ Error opening video")
     exit()
 
-mask = np.zeros_like(frame[:, :, 0])
-pts = np.array(main_parking_area, np.int32).reshape((-1, 1, 2))
-cv2.fillPoly(mask, [pts], 255)
 cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 520)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
 
 cap.set(cv2.CAP_PROP_FPS, 1)
 
@@ -76,12 +84,13 @@ async def close_gate():
 
 client = set()
 client_subscribe = set()
+
 async def client_handle(ws):
     client.add(ws)
     try:
         try:
             async for message in ws:
-                log.log_event(f"Client message: {message}")
+                print(f"Client message: {message}")
                 demessage = json.loads(message)
                 if demessage['action'] == "reserve":
                     slot_idx = demessage['slot']
@@ -117,7 +126,7 @@ async def client_handle(ws):
         finally:
             client.remove(ws)
     except Exception as e:
-        log.error_event(f"Error when trying to start websocket, error : {e}")
+        print(f"Error when trying to start websocket, error : {e}")
         
 
 
@@ -147,7 +156,7 @@ async def client_handle(ws):
 
 async def start_websocket():
     server = await websockets.serve(client_handle, "127.0.0.1", 4001)
-    log.success_event(f"Websocket server started at ws://127.0.0.1:4001")
+    print(f"Websocket server started at ws://127.0.0.1:4001")
     await asyncio.Future()  # Run forever
     server.close()
     await server.wait_closed()
@@ -170,18 +179,23 @@ def calculate_bet(timein, timeout, rate) :
     return float(((timeout - timein)/3600) * rate)
 
 
+
 async def main():
+    frame_count = 0
     
     while True:
         
         success, frame = cap.read()
         if not success:
             break
+        
+        frame_count += 1
+        if frame_count % 3 != 0:
+            continue  # skip this frame
 
-        masked_frame = cv2.bitwise_and(frame, frame, mask=mask)
 
         # Detect cars only (YOLO class 2 = car)
-        results = model(masked_frame, stream=True, classes=[2])
+        results = model(frame, stream=True, classes=[2])
         cars = []
 
         for r in results:
@@ -215,7 +229,7 @@ async def main():
 
             if occupied:
                 occupied_slots += 1
-                log.log_event(f"Lot {idx + 1} is full")
+                print(f"Lot {idx + 1} is full")
                 
                 
                 
@@ -250,7 +264,7 @@ async def main():
                     }
             else:
                 empty_slots += 1
-                log.log_event(f"Lot {idx + 1} is free")
+                print(f"Lot {idx + 1} is free")
                     
                 
                 if parking[idx]['free'] == True and reserve_lot[idx] == True:
@@ -302,12 +316,18 @@ async def main():
                         "pay": False
                     }
     
+        lcd.cursor_pos = (1, 0)
+        lcd.write_string(f'|{"XX" if parking[0]["free"] != True else "  "}|--1      4--|{"XX" if parking[3]["free"] != True else "  "}|')
+        lcd.cursor_pos = (2, 0)
+        lcd.write_string(f'|{"XX" if parking[1]["free"] != True else "  "}|--2      5--|{"XX" if parking[4]["free"] != True else "  "}|')
+        lcd.cursor_pos = (3, 0)
+        lcd.write_string(f'|{"XX" if parking[2]["free"] != True else "  "}|--3      6--|{"XX" if parking[5]["free"] != True else "  "}|')
 
-        log.log_event(f"Total Parking: {total_parking}")
-        log.log_event(f"Occupied: {occupied_slots}")
-        log.log_event(f"Empty: {empty_slots}")
+        print(f"Total Parking: {total_parking}")
+        print(f"Occupied: {occupied_slots}")
+        print(f"Empty: {empty_slots}")
 
-
+        
         park_info = {
             "action": "subscribe",
             "timestamps": time.time(),
@@ -326,19 +346,13 @@ async def main():
             )
             for ws, res in zip(list(client), results):
                 if isinstance(res, Exception):
-                    log.warning_event(f"Client {ws} disconnected ({res}), removing..")
+                    print(f"Client {ws} disconnected ({res}), removing..")
                     client.remove(ws)
         except Exception as e:
-            log.warning_event(f'{e}')
+            print(f'{e}')
 
         await asyncio.sleep(3)
 
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            exit(0)
-
-    # Release
-    cap.release()
-    cv2.destroyAllWindows()
 
 
 async def start():
