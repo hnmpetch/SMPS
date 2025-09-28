@@ -13,13 +13,15 @@ config = os.path.join("config", "config.yml")
 with open(config, "r", encoding="utf-8") as yml:
     config = yaml.safe_load(yml)
     
-CAM_ID = config["main"]["cam"]
+CAM_ID =  config["main"]["cam"]
 
 
 # -----------------------------
 # Video input
 # -----------------------------
 cap = cv2.VideoCapture(config['main']['cam'])
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 480)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
 
 ret, frame = cap.read()
 if not ret:
@@ -32,15 +34,21 @@ current_polygon = []      # Points for the polygon being drawn
 main_area = []            # Overall parking area polygon
 in_area = []
 out_area = []
+left_side = []
+left_side_poly = []
+right_side = []
+right_side_poly = []
 drawing_main = False      # Flag: Are we drawing the main parking area?
 drawing_in = False
 drawing_out = False
+drawing_left = False
+drawing_right = False
 
 # -----------------------------
 # Mouse callback to draw polygons
 # -----------------------------
 def draw_polygon(event, x, y, flags, param):
-    global current_polygon, frame, parking_slots, main_area, drawing_main, in_area, out_area, drawing_in,drawing_out
+    global current_polygon, frame, parking_slots, main_area, drawing_main, in_area, out_area, drawing_in,drawing_out, drawing_right,drawing_left,left_side,left_side_poly,right_side_poly, right_side
 
     if event == cv2.EVENT_LBUTTONDOWN:
         current_polygon.append((x, y))
@@ -61,15 +69,42 @@ def draw_polygon(event, x, y, flags, param):
                 out_area.extend(current_polygon)
                 log.log_event(f"Out area defined: {current_polygon}")
             else:
-                parking_slots.append(current_polygon.copy())
-                # Calculate center to put slot number
+                
+                if drawing_right:
+                    right_side_poly.append(current_polygon.copy())
+                    
+                    parking_slots.append({
+                        "id": len(parking_slots) + 1,
+                        "side": "right",
+                        "label": str(len(parking_slots) + 1),
+                        "zone": 0,
+                        "pay": False,
+                        "reserved": False,
+                        "polygon": current_polygon.copy(),
+                    })
+                    
+                    log.log_event(f"New slot right side zone 0 slot id {len(right_side_poly)}")
+                elif drawing_left:
+                    left_side_poly.append(current_polygon.copy())
+                    parking_slots.append({
+                        "id": len(parking_slots) + 1,
+                        "side": "left",
+                        "label": len(parking_slots) + 1,
+                        "zone": 0,
+                        "pay": False,
+                        "reserve": False,
+                        "polygon": current_polygon.copy(),
+                    })
+                    log.log_event(f"New slot left side zone 0 slot id {len(left_side_poly)}")
+                    
+                
+                
                 M = cv2.moments(pts)
                 if M["m00"] != 0:
                     cx = int(M["m10"]/M["m00"])
                     cy = int(M["m01"]/M["m00"])
                     cv2.putText(frame, str(len(parking_slots)), (cx-10, cy+10),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
-                log.log_event(f"New slot #{len(parking_slots)} added: {current_polygon}")
 
         current_polygon = []
 
@@ -83,7 +118,7 @@ log.log_event("Instructions:")
 log.log_event(" - Left click to add points")
 log.log_event(" - Right click to finish polygon")
 log.log_event(" - Press 'm' to toggle main parking area drawing")
-log.log_event(" - Press 'r' to reset")
+log.log_event(" - Press 'c' to reset")
 log.log_event(" - Press 'q' to quit")
 
 while True:
@@ -99,24 +134,56 @@ while True:
 
     if key == ord("m"):
         drawing_main = not drawing_main
+        drawing_in = False
+        drawing_out = False
+        drawing_left = False
+        drawing_right = False
         print("Drawing main area:", drawing_main)
     elif key == ord("i"):
         drawing_in = not drawing_in
+        drawing_main = False
+        drawing_out = False
+        drawing_left = False
+        drawing_right = False
         print("Drawing in area:", drawing_in)
     elif key == ord("o"):
         drawing_out = not drawing_out
+        drawing_main = False      # Flag: Are we drawing the main parking area?
+        drawing_in = False
+        drawing_left = False
+        drawing_right = False
         print("Drawing out area:", drawing_out)
-
     elif key == ord("r"):
-        frame = clone.copy()
-        parking_slots = []
-        current_polygon = []
-        main_area = []
-        in_area = []
-        out_area = []
+        drawing_right = not drawing_right
         drawing_main = False      # Flag: Are we drawing the main parking area?
         drawing_in = False
         drawing_out = False
+        drawing_left = False
+        print("Drawing right area:", drawing_right)
+    elif key == ord("l"):
+        drawing_left = not drawing_left
+        drawing_main = False      # Flag: Are we drawing the main parking area?
+        drawing_in = False
+        drawing_out = False
+        drawing_right = False
+        print("Drawing left area:", drawing_left)
+
+    elif key == ord("c"):
+        frame = clone.copy()
+        parking_slots = []        # List to store individual parking slot polygons
+        current_polygon = []      # Points for the polygon being drawn
+        main_area = []            # Overall parking area polygon
+        in_area = []
+        out_area = []
+        left_side = []
+        left_side_poly = []
+        right_side = []
+        right_side_poly = []
+        drawing_main = False      # Flag: Are we drawing the main parking area?
+        drawing_in = False
+        drawing_out = False
+        drawing_left = False
+        drawing_right = False
         print("Reset all")
 
     elif key == ord("q"):

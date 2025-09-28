@@ -1,33 +1,42 @@
-# Smart Parking Backend
+# Smart Parking System
 
-Production-ready backend for smart parking system.
+This project is smart pparking system to check each car that in parking lot use yolo model to detect each car
 
-## Features
-- User authentication via Line LIFF/Line Login
-- Store user and parking info in MySQL
-- Generate and send QR code for payment (PromptPay/TrueMoney) via Line
-- Receive and verify payment slip (SlipOK API)
-- RESTful API for frontend
-- WebSocket for real-time parking status
-- .env config, Dockerfile, best practices
+This project will open websocket server at `main-server.py` and let `main-ras.py` connect and send data.
+After main-ras.py send data main-server.py will show camera view and let process to check each slot and return status to main-ras.py to user servo and lcd.
 
-## Getting Started
-1. Install dependencies: `npm install`
-2. Copy `.env.example` to `.env` and fill in your config
-3. Start server: `npm start`
+webapp will connect websocket to main-server.py to get data and show slot
 
-## Folder Structure
-- `/src` - main source code
-- `/src/controllers` - API controllers
-- `/src/models` - database models
-- `/src/routes` - API routes
-- `/src/services` - business logic (Line, QR, SlipOK, etc.)
-- `/src/utils` - utility functions
-- `/public` - static files
-- `/config` - config files
+---
 
-## Environment Variables
-See `.env.example` for required variables (MySQL, Line, SlipOK, etc.)
+## Hardware
 
-## License
-MIT
+1. Rasberry pi 5
+2. Camera
+3. Notebook or Laptop or PC
+4. lcd
+5. servo
+
+---
+
+## Start
+
+1. `git clone https://github.com/hnmpetch/SMPS.git`
+2. `cd SMPS`
+3. `pip install -r requirements.txt` install requirements
+4. copy `main-ras.py` and install `pip install -r requirements.py`
+5. run `setup.py` to setup
+6. config file `config/config.yml`
+7. run main-server.py `python3 main-server.py`
+8. run main-ras.py `python3 main-ras.py`
+9. `cd backend` (optional)
+10. `npm i` (optional)
+11. `cd ../frontend/smps`
+12. `npm i` install requirements.
+13. `npm run build` build product.
+14. `npm run start` start webapp.
+15. Create line message api server if you want.
+
+---
+
+### developer [HNM Studio](https://github.com/hnmpetch)

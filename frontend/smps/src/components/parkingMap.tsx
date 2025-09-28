@@ -46,7 +46,10 @@ export const ParkingMap: React.FC<ParkingMapProps> = ({ slots }) => {
             <a
                 onClick={() => {
                     if (slot.occupied = true){
-                        toast.error("ที่จอดรถนี้มีคนจองแล้ว")
+                        toast.error("ที่จอดรถนี้มีคนจอดแล้ว")
+                    }
+                    if (slot.occupied = false){
+                        toast.success("ที่จอดรถนี้ว่าง")
                     }
                 }}
                 className={`flex h-20 items-center justify-center rounded-md shadow-xl ${bg} transition-all duration-300`}

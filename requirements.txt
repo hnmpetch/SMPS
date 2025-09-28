@@ -1,8 +1,7 @@
 opencv-python
-pandas
-mysql-connector-python
 PyYAML
 ultralytics
 numpy
 gpiozero
 websockets
+aiohttp

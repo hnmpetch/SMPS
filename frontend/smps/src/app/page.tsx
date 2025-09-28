@@ -1,21 +1,49 @@
-import Image from "next/image";
-import { useMemo } from 'react'
-import { ParkingSlot, ParkingMap }from '../components/parkingMap';
+"use client";
+
+import { useMemo, useState, useEffect } from "react";
+import { ParkingSlot, ParkingMap } from "../components/parkingMap";
 import { Topbar } from "../components/topbar";
 
-const slots: ParkingSlot[] = [
-    { id: 1, label: '1', zone: 1, side: 'left', occupied: true, reserved: false, pay: true , join_at: 1111},
-    { id: 2, label: '2', zone: 1, side: 'left', occupied: false, reserved: true, pay: true , join_at: 1111},
-    { id: 3, label: '3', zone: 1, side: 'left', occupied: true, reserved: false, pay: true , join_at: 1111},
-    { id: 4, label: '4', zone: 1, side: 'right', occupied: true, reserved: false, pay: true , join_at: 1111},
-    { id: 5, label: '5', zone: 1, side: 'right', occupied: true, reserved: false, pay: true , join_at: 1111},
-    { id: 6, label: '6', zone: 1, side: 'right', occupied: false, reserved: false, pay: true , join_at: 1111},
-
-];
-
 export default function Home() {
+  const [slots, setSlots] = useState<ParkingSlot[]>([]);
+  const [ws, setWs] = useState<WebSocket | null>(null);
 
-  const emptyCount = useMemo(() => slots.filter(s => !s.occupied && !s.reserved).length, []);
+  // เปิด websocket
+  useEffect(() => {
+    const socket = new WebSocket("ws://10.32.104.73:5000");
+    setWs(socket);
+
+    socket.onopen = () => {
+      console.log("✅ Connected to server");
+      socket.send(JSON.stringify({ action: "subscribe", type: "web" }));
+    };
+
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.info) {
+          // อัปเดต slots จาก server
+          setSlots(data.info);
+        }
+      } catch (err) {
+        console.error("❌ Parse error:", err);
+      }
+    };
+
+    socket.onclose = () => {
+      console.log("❌ Disconnected");
+    };
+
+    return () => {
+      socket.close();
+    };
+  }, []);
+
+  // จำนวนที่ว่าง (ไม่นับ reserved)
+  const emptyCount = useMemo(
+    () => slots.filter((s) => !s.occupied && !s.reserved).length,
+    [slots]
+  );
   const totalCount = slots.length;
 
   return (

@@ -10,6 +10,22 @@ config/config_lot
 parking7_output.mp4
 yolov8n.pt
 example
+.github
 
 
 backend/node_modules
+venv
+test
+testlcd.py
+beta
+data
+testras.py
+config/config_lot.json
+WIN_20250926_10_05_07_Pro.mp4
+
+
+calibration_image_sample_data_20x128x128x3_float32.npy
+yolov8n_float32.tflite
+yolov8n_int8.tflite
+yolov8n.onnx
+yolov8n_saved_model
